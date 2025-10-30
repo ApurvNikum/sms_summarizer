@@ -1,124 +1,92 @@
 import pandas as pd
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder
-from sentence_transformers import SentenceTransformer, InputExample, losses
-from sentence_transformers.models import Transformer, Pooling
+from sentence_transformers import SentenceTransformer, InputExample, losses, models
 from torch.utils.data import DataLoader
 import torch
+import torch.nn as nn
+import os
+import json
 
-# --- Configuration ---
-DATA_FILE = 'annotated_data_set.csv'
-
-# Path to your local model folder (downloaded or cached)
-MODEL_NAME_PATH = './local_model/all-MiniLM-L6-v2'
-
-OUTPUT_MODEL_PATH = 'sms_classification_model'
-NUM_EPOCHS = 4
+# ---- CONFIG ----
+CSV_PATH = "annotated_data_set.csv"
+MODEL_NAME = "all-MiniLM-L6-v2"
+OUTPUT_DIR = "fine_tuned_sms_classifier"
 BATCH_SIZE = 16
+EPOCHS = 3
+LR = 2e-5
+# ----------------
 
-def prepare_data_and_train_model():
-    """
-    Loads data, preprocesses labels, prepares DataLoader, and fine-tunes the S-BERT model.
-    """
-    print("--- 1. Loading and Filtering Data ---")
-    try:
-        df = pd.read_csv(DATA_FILE)
-        print(f"✅ Data loaded from {DATA_FILE}.")
-    except FileNotFoundError:
-        print(f"CRITICAL ERROR: Data file '{DATA_FILE}' not found. Aborting.")
-        return
+# 1️⃣ Load dataset
+df = pd.read_csv(CSV_PATH)
+df = df[['body_cleaned', 'annotation_category']].dropna()
 
-    # Filter out non-core categories for training
-    CORE_CATEGORIES = [
-        'Travel', 'Telecom', 'Retail', 'Banking',
-        'Education', 'Transactional/Security', 'Status/Alert'
-    ]
-    df_train = df[df['annotation_category'].isin(CORE_CATEGORIES)].copy()
+print(f"✅ Loaded {len(df)} samples from {CSV_PATH}")
 
-    # Ensure all categories have at least 2 samples
-    valid_categories = df_train['annotation_category'].value_counts()
-    valid_categories = valid_categories[valid_categories >= 2].index
-    df_train = df_train[df_train['annotation_category'].isin(valid_categories)]
+# 2️⃣ Encode labels
+labels = sorted(df['annotation_category'].unique())
+label2id = {label: idx for idx, label in enumerate(labels)}
+id2label = {idx: label for label, idx in label2id.items()}
+df['label_id'] = df['annotation_category'].map(label2id)
+num_labels = len(labels)
 
-    print(f"Data loaded. Total messages for training: {len(df_train)}")
+print(f"🧾 Classes: {label2id}")
 
-    # Combine sender and message text (feature engineering)
-    df_train['text_input'] = df_train['sender'].astype(str) + " [SEP] " + df_train['body_cleaned'].astype(str)
+# 3️⃣ Prepare data for training
+train_samples = [
+    InputExample(texts=[text], label=int(label))
+    for text, label in zip(df['body_cleaned'], df['label_id'])
+]
 
-    # --- 2. Encode Labels ---
-    print("\n--- 2. Encoding Labels ---")
-    label_encoder = LabelEncoder()
-    df_train['label_id'] = label_encoder.fit_transform(df_train['annotation_category'])
+train_dataloader = DataLoader(train_samples, shuffle=True, batch_size=BATCH_SIZE)
 
-    # --- 3. Split into Train/Validation ---
-    print("\n--- 3. Splitting and Preparing Data Loaders ---")
-    train_df, val_df = train_test_split(
-        df_train,
-        test_size=0.1,
-        random_state=42,
-        stratify=df_train['annotation_category']
-    )
+# 4️⃣ Load base model
+base_model = SentenceTransformer(MODEL_NAME)
+embedding_dim = base_model.get_sentence_embedding_dimension()
 
-    # SoftmaxLoss requires two identical texts for each sample
-    train_examples_fixed = [
-        InputExample(texts=[row['text_input'], row['text_input']], label=row['label_id'])
-        for _, row in train_df.iterrows()
-    ]
-
-    train_dataloader_fixed = DataLoader(
-        train_examples_fixed,
-        shuffle=True,
-        batch_size=BATCH_SIZE,
-        pin_memory=False
-    )
-
-    # --- 4. Model Setup and Fine-Tuning ---
-    print("\n--- 4. Model Setup and Fine-Tuning ---")
-
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"Using device: {device}")
-
-    try:
-        # ✅ Proper SBERT-compatible model loading (fixes tokenize error)
-        word_embedding_model = Transformer(MODEL_NAME_PATH)
-
-        pooling_model = Pooling(
-            word_embedding_model.get_word_embedding_dimension(),
-            pooling_mode_mean_tokens=True,
-            pooling_mode_cls_token=False,
-            pooling_mode_max_tokens=False
+# 5️⃣ Define classifier head (custom dense layer)
+class ClassificationHead(nn.Module):
+    def __init__(self, input_dim, num_labels):
+        super().__init__()
+        self.classifier = nn.Sequential(
+            nn.Linear(input_dim, 256),
+            nn.ReLU(),
+            nn.Dropout(0.2),
+            nn.Linear(256, num_labels)
         )
 
-        model = SentenceTransformer(modules=[word_embedding_model, pooling_model], device=device)
+    def forward(self, features):
+        x = features["sentence_embedding"]
+        logits = self.classifier(x)
+        return {"logits": logits}
 
-        print("✅ Model successfully constructed using Transformer wrapper.")
+# Attach custom head
+classifier = ClassificationHead(embedding_dim, num_labels)
+base_model.add_module("classification_head", classifier)
 
-    except Exception as e:
-        print(f"CRITICAL ERROR during model construction: {e}")
-        print("Please ensure local model directory contains config.json, tokenizer.json, pytorch_model.bin, etc.")
-        return
+# 6️⃣ Define training loss (CrossEntropy)
+class ClassificationLoss(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.loss_fct = nn.CrossEntropyLoss()
 
-    # --- 5. Define Loss Function ---
-    train_loss = losses.SoftmaxLoss(
-        model=model,
-        sentence_embedding_dimension=model.get_sentence_embedding_dimension(),
-        num_labels=len(label_encoder.classes_)
-    )
+    def forward(self, features, labels):
+        logits = features["logits"]
+        return self.loss_fct(logits, labels.long())
 
-    # --- 6. Start Training ---
-    print("\n🚀 Starting training...\n")
-    model.fit(
-        train_objectives=[(train_dataloader_fixed, train_loss)],
-        epochs=NUM_EPOCHS,
-        warmup_steps=100,
-        output_path=OUTPUT_MODEL_PATH,
-        show_progress_bar=True,
-        use_amp=False   # Disable mixed precision for CPU
-    )
+loss = ClassificationLoss()
 
-    print(f"\n🎉 Training complete! Model saved to '{OUTPUT_MODEL_PATH}'")
-    print(f"Model trained on classes: {list(label_encoder.classes_)}")
+# 7️⃣ Train model
+base_model.fit(
+    train_objectives=[(train_dataloader, loss)],
+    epochs=EPOCHS,
+    warmup_steps=int(0.1 * len(train_dataloader)),
+    output_path=OUTPUT_DIR,
+    optimizer_params={'lr': LR}
+)
 
+# 8️⃣ Save label mapping
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+with open(os.path.join(OUTPUT_DIR, "label_mapping.json"), "w") as f:
+    json.dump(label2id, f, indent=2)
 
-if __name__ == '__main__':
-    prepare_data_and_train_model()
+print(f"🎯 Fine-tuned model saved to: {OUTPUT_DIR}")
+print(f"📁 Labels mapping saved: {label2id}")
