@@ -1,0 +1,11 @@
+myenv/
+.venv/
+pycache/
+*.pyc
+sms-dump.xml
+sms_classification_model/
+*.pth
+*.bin
+*.pt
+.ipynb_checkpoints
+.DS_Store
