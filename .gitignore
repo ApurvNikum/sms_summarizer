@@ -6,6 +6,9 @@ sms-dump.xml
 sms_classification_model/
 *.pth
 *.bin
-*.pt
+classifier_model_20251101_183051.pt
+classifier_model_20251101_220130.pt
+
+
 .ipynb_checkpoints
 .DS_Store
