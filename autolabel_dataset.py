@@ -1,15 +1,9 @@
 import re
 import pandas as pd
 
-# ============================================================
-# 🗂️ Load preprocessed XML → CSV dataset
-# ============================================================
-df = pd.read_csv("raw_sms.csv")  # update path if needed
-print(f"✅ Loaded {len(df)} messages")
+df = pd.read_csv("raw_sms.csv")
+print(f"Loaded {len(df)} messages")
 
-# ============================================================
-# 🔍 Helper: clean text
-# ============================================================
 def clean_text(text):
     if pd.isna(text):
         return ""
@@ -18,9 +12,6 @@ def clean_text(text):
 df["clean_body"] = df["message"].apply(clean_text)
 df["clean_sender"] = df["address"].astype(str).str.strip()
 
-# ============================================================
-# 🏷️ Keyword groups for regex-based labeling
-# ============================================================
 auth_keywords = [
     r"\botp\b", r"one[-\s]?time[-\s]?password", r"verification\s?code",
     r"login\s?code", r"auth", r"verify", r"2fa"
@@ -54,57 +45,36 @@ education_keywords = [
     r"result", r"marks", r"tuition", r"fees", r"student", r"degree", r"class"
 ]
 
-# ============================================================
-# 🧮 Label assignment logic (priority-ordered)
-# ============================================================
 def auto_label(sender, body):
     sender = str(sender).strip()
     body = clean_text(body)
 
-    # 1️⃣ Personal – numeric sender only (no OTP/bank/telecom pattern)
     if re.fullmatch(r"\d{10}", sender):
         if not any(re.search(k, body) for k in auth_keywords + bank_keywords + telecom_keywords):
             return "Personal"
 
-    # 2️⃣ Transactional/Security – OTPs, banks, authentication
     if any(re.search(k, body) for k in auth_keywords + bank_keywords):
         return "Transactional/Security"
 
-    # 3️⃣ Telecom – recharge, data, operators
     if any(re.search(k, body) for k in telecom_keywords):
         return "Telecom"
 
-    # 4️⃣ Retail – shopping, brand offers
     if any(re.search(k, body) for k in retail_keywords):
         return "Retail"
 
-    # 5️⃣ Travel – travel, booking, transport
     if any(re.search(k, body) for k in travel_keywords):
         return "Travel"
 
-    # 6️⃣ Education – exams, college, school
     if any(re.search(k, body) for k in education_keywords):
         return "Education"
 
-    # 7️⃣ Default – unlabeled/noise
     return "Noise/Unlabeled"
 
-# ============================================================
-# 🏷️ Apply auto labeling
-# ============================================================
-df["annotation_category"] = df.apply(
-    lambda x: auto_label(x["clean_sender"], x["clean_body"]), axis=1
-)
+df["annotation_category"] = df.apply(lambda x: auto_label(x["clean_sender"], x["clean_body"]), axis=1)
 
-# ============================================================
-# 📊 Summary statistics
-# ============================================================
-print("\n📊 Category distribution:")
+print("Category distribution:")
 print(df["annotation_category"].value_counts())
 
-# ============================================================
-# 💾 Save annotated dataset
-# ============================================================
-output_path = "output/annotated_dataset_v2.csv"
+output_path = "output/annotated_dataset.csv"
 df.to_csv(output_path, index=False)
-print(f"\n✅ Auto-labeled dataset saved to: {output_path}")
+print("Annotated dataset saved to:", output_path)
