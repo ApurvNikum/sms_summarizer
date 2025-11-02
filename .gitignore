@@ -5,9 +5,8 @@ pycache/
 sms-dump.xml
 sms_classification_model/
 *.pth
-*.bin
-classifier_model_20251101_183051.pt
-classifier_model_20251101_220130.pt
+# *.bin
+
 
 
 .ipynb_checkpoints
