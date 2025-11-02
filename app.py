@@ -9,18 +9,21 @@ import os
 import joblib
 from sklearn.cluster import KMeans
 
+<<<<<<< HEAD
 # ============================================================
 # ⚙ Model Paths
 # ============================================================
 embedding_model_path = r"output\fine_tuned_20251102_010016"
 classifier_path = r"output\classifier_model_20251102_015350.pt"
 summary_model_path = r"output\sms_summary_model.pkl"
+=======
+embedding_model_path = "models/fine_tuned_embedding"
+classifier_path = "models/classifier_model.pt"
+summary_model_path = "models/sms_summary_model.pkl"
+>>>>>>> 9017c742e2b4fdf98265425768e780f6709b2031
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
-# ============================================================
-# 🧠 Load Classifier Model
-# ============================================================
 checkpoint = torch.load(classifier_path, map_location=device)
 labels_map = checkpoint["labels_map"]
 reverse_labels_map = {v: k for k, v in labels_map.items()}
@@ -49,6 +52,7 @@ classifier = SMSClassifier(input_dim, num_classes).to(device)
 classifier.load_state_dict(checkpoint["classifier_state_dict"], strict=False)
 classifier.eval()
 
+<<<<<<< HEAD
 # ============================================================
 # 🔤 Embedding + Summary Model
 # ============================================================
@@ -57,6 +61,11 @@ if device == "cuda":
     embedding_model = embedding_model.to(torch.device("cuda"))
 
 summary_model = joblib.load(summary_model_path)
+=======
+embedding_model = SentenceTransformer(embedding_model_path, device=device)
+summary_model = joblib.load(summary_model_path)
+
+>>>>>>> 9017c742e2b4fdf98265425768e780f6709b2031
 if isinstance(summary_model, tuple):
     vectorizer, summary_clf, sender_map = summary_model
 else:
@@ -64,9 +73,6 @@ else:
     summary_clf = summary_model["model"]
     sender_map = summary_model.get("sender_map", None)
 
-# ============================================================
-# 🔮 Prediction + Summarization Logic
-# ============================================================
 def predict_sms(text):
     embedding = embedding_model.encode([text], convert_to_tensor=True).to(device)
     with torch.no_grad():
@@ -105,9 +111,6 @@ def auto_summarize(messages, n_clusters=5):
         })
     return pd.DataFrame(summaries)
 
-# ============================================================
-# 🎨 Streamlit UI Setup
-# ============================================================
 st.set_page_config(page_title="📩 Smart SMS Insights Dashboard", layout="wide", page_icon="📱")
 
 theme_choice = st.sidebar.radio("🎨 Theme", ["Light", "Dark"], index=0)
@@ -141,6 +144,7 @@ if theme_choice == "Dark":
 else:
     st.markdown("""
         <style>
+<<<<<<< HEAD
         body, .stApp {
             background-color: #F4F6FA;
             color: #111111;
@@ -214,6 +218,9 @@ else:
         .stFileUploader label {
             color: #111111 !important;
         }
+=======
+        body, .stApp { background-color: white; color: black; }
+>>>>>>> 9017c742e2b4fdf98265425768e780f6709b2031
         </style>
     """, unsafe_allow_html=True)
 # ✅ Universal file uploader visibility fix for both light & dark themes
@@ -242,6 +249,7 @@ st.markdown("""
 
 
 
+<<<<<<< HEAD
 
 # ============================================================
 # 🏷 Header
@@ -254,6 +262,11 @@ st.markdown("""
 # ============================================================
 # 📥 Input Options
 # ============================================================
+=======
+st.markdown("<h1 style='text-align:center;'>📩 Smart SMS Insights Dashboard</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center; color:gray;'>Summarize and categorize your SMS messages automatically</p>", unsafe_allow_html=True)
+
+>>>>>>> 9017c742e2b4fdf98265425768e780f6709b2031
 input_mode = st.radio("Select Input Mode", ["📂 Upload CSV File", "📝 Write / Paste Messages"])
 messages = []
 df = None
@@ -270,6 +283,7 @@ if input_mode == "📂 Upload CSV File":
         st.success(f"✅ Loaded {len(messages)} messages from file.")
 else:
     st.markdown("""
+<<<<<<< HEAD
     ✍ How to write your messages:
     - One message per line in the format Sender: Message
     - Example:
@@ -277,6 +291,10 @@ else:
       Amazon: Your package will arrive tomorrow  
       HDFC Bank: Your OTP is 283716 for login  
       HR Dept: Meeting rescheduled to 5 PM today
+=======
+    ✍️ **How to write your messages:**
+    - One message per line in the format: Sender: Message
+>>>>>>> 9017c742e2b4fdf98265425768e780f6709b2031
     """)
     user_input = st.text_area("Paste or write messages below:", height=250)
     if user_input.strip():
@@ -294,11 +312,14 @@ else:
         messages = msgs
         st.success(f"✅ {len(messages)} messages ready for analysis (with senders).")
 
+<<<<<<< HEAD
 st.markdown("</div>", unsafe_allow_html=True)
 
 # ============================================================
 # 🚀 Run Analysis
 # ============================================================
+=======
+>>>>>>> 9017c742e2b4fdf98265425768e780f6709b2031
 if st.button("🚀 Analyze Messages") and messages:
     with st.spinner("Analyzing and summarizing messages... please wait"):
         results, valid_msgs = [], []
@@ -315,6 +336,7 @@ if st.button("🚀 Analyze Messages") and messages:
             df_results = pd.DataFrame(results)
             summary = df_results["Category"].value_counts().reset_index()
             summary.columns = ["Category", "Count"]
+<<<<<<< HEAD
 
             st.markdown("<div class='card'>", unsafe_allow_html=True)
             st.markdown("### 📊 Category Overview")
@@ -322,7 +344,12 @@ if st.button("🚀 Analyze Messages") and messages:
             st.markdown("</div>", unsafe_allow_html=True)
 
             st.markdown("<div class='card'>", unsafe_allow_html=True)
+=======
+            st.markdown("### 📊 Category Overview")
+            st.bar_chart(summary.set_index("Category"))
+>>>>>>> 9017c742e2b4fdf98265425768e780f6709b2031
             st.markdown("### 🧾 Summarized Insights")
+
             if df is not None and any(col.lower() == "sender" for col in df.columns):
                 sender_col = [col for col in df.columns if col.lower() == "sender"][0]
                 summaries = []
@@ -336,14 +363,26 @@ if st.button("🚀 Analyze Messages") and messages:
                 st.dataframe(auto_summary)
             st.markdown("</div>", unsafe_allow_html=True)
 
+<<<<<<< HEAD
             st.markdown("<div class='card'>", unsafe_allow_html=True)
+=======
+>>>>>>> 9017c742e2b4fdf98265425768e780f6709b2031
             st.markdown("### 🔍 Detailed Message Analysis")
             st.dataframe(df_results, use_container_width=True)
             st.markdown("</div>", unsafe_allow_html=True)
 
             csv_out = df_results.to_csv(index=False).encode("utf-8")
+<<<<<<< HEAD
             st.download_button("💾 Download Categorized Messages", data=csv_out, file_name="sms_categorized.csv", mime="text/csv")
 
+=======
+            st.download_button(
+                label="💾 Download Categorized Messages",
+                data=csv_out,
+                file_name="sms_categorized.csv",
+                mime="text/csv"
+            )
+>>>>>>> 9017c742e2b4fdf98265425768e780f6709b2031
             st.success("✅ Analysis complete! Summaries and categories ready.")
 else:
     st.info("👆 Choose an input mode and provide messages, then click Analyze Messages.")
