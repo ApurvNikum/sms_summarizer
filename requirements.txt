@@ -1,0 +1,18 @@
+# --- Core ML / Deep Learning ---
+torch>=2.3.0
+sentence-transformers>=3.0.0
+scikit-learn>=1.4.2
+numpy>=1.26.4
+pandas>=2.2.2
+
+# --- App / UI ---
+streamlit>=1.38.0
+
+# --- Utilities ---
+joblib>=1.4.2
+protobuf>=4.25.3
+altair>=5.3.0
+
+# --- Optional (recommended for stability) ---
+tqdm>=4.66.4
+transformers>=4.41.2
