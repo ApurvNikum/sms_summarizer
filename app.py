@@ -12,9 +12,9 @@ from sklearn.cluster import KMeans
 # ============================================================
 # ⚙ Model Paths
 # ============================================================
-embedding_model_path = r"output\fine_tuned_20251102_010016"
-classifier_path = r"output\classifier_model_20251102_015350.pt"
-summary_model_path = r"output\sms_summary_model.pkl"
+embedding_model_path = r"output/fine_tuned_20251102_010016"
+classifier_path = r"output/classifier_model_20251102_015350.pt"
+summary_model_path = r"output/sms_summary_model.pkl"
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
