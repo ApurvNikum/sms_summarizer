@@ -12,9 +12,9 @@ from sklearn.cluster import KMeans
 # ============================================================
 # ⚙ Model Paths
 # ============================================================
-embedding_model_path = r"C:\Users\Rishita\Downloads\sms\fine_tuned_20251031_162336"
-classifier_path = r"C:\Users\Rishita\Downloads\sms\classifier_model_20251031_163358.pt"
-summary_model_path = r"C:\Users\Rishita\Downloads\sms\sms_summary_model.pkl"
+embedding_model_path = r"output\fine_tuned_20251102_010016"
+classifier_path = r"output\classifier_model_20251102_015350.pt"
+summary_model_path = r"output\sms_summary_model.pkl"
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -122,24 +122,49 @@ if theme_choice == "Dark":
             background-color: #0E1117;
             color: #EAEAEA;
         }
-        .stDataFrame, .stMarkdown, .css-1d391kg, .stTextInput, .stTextArea, .stFileUploader, .stRadio {
+        /* Headings and labels */
+        h1, h2, h3, h4, h5, h6, label, .stMarkdown, .css-1d391kg, .css-q8sbsg {
             color: #EAEAEA !important;
         }
+        /* Inputs and text areas */
+        .stTextInput>div>div>input, .stTextArea textarea {
+            background-color: #1E1E1E !important;
+            color: #EAEAEA !important;
+            border: 1px solid #444 !important;
+        }
+        /* Buttons */
         .stButton>button {
-            background-color: #262730;
-            color: #EAEAEA;
-            border: 1px solid #444;
+            background-color: #333 !important;
+            color: #EAEAEA !important;
+            border: 1px solid #666 !important;
+            transition: 0.3s;
         }
         .stButton>button:hover {
-            background-color: #333;
-            color: white;
+            background-color: #4A4A4A !important;
+            color: #FFFFFF !important;
+            border-color: #999 !important;
         }
-        .stTextArea textarea {
-            background-color: #1E1E1E;
-            color: #EAEAEA;
+        /* File uploader */
+        .stFileUploader>div>div>div>button {
+            background-color: #333 !important;
+            color: #EAEAEA !important;
+            border: 1px solid #555 !important;
+        }
+        /* Radio buttons and sidebar */
+        .stRadio>div>label {
+            color: #EAEAEA !important;
+        }
+        .stSidebar {
+            background-color: #161A1F !important;
+        }
+        /* Tables and DataFrames */
+        .stDataFrame table {
+            color: #EAEAEA !important;
+            background-color: #1A1D23 !important;
         }
         </style>
     """, unsafe_allow_html=True)
+
 else:
     st.markdown("""
         <style>
@@ -147,8 +172,41 @@ else:
             background-color: white;
             color: black;
         }
+        /* Inputs and text areas */
+        .stTextInput>div>div>input, .stTextArea textarea {
+            background-color: #F9F9F9 !important;
+            color: black !important;
+            border: 1px solid #CCC !important;
+        }
+        /* Buttons */
+        .stButton>button {
+            background-color: #E6E6E6 !important;
+            color: black !important;
+            border: 1px solid #CCC !important;
+            transition: 0.3s;
+        }
+        .stButton>button:hover {
+            background-color: #D0D0D0 !important;
+            color: black !important;
+        }
+        /* File uploader */
+        .stFileUploader>div>div>div>button {
+            background-color: #E6E6E6 !important;
+            color: black !important;
+            border: 1px solid #CCC !important;
+        }
+        /* Sidebar */
+        .stSidebar {
+            background-color: #F3F3F3 !important;
+        }
+        /* Tables and DataFrames */
+        .stDataFrame table {
+            color: black !important;
+            background-color: white !important;
+        }
         </style>
     """, unsafe_allow_html=True)
+
 
 # --------- App Header ---------
 st.markdown("<h1 style='text-align:center;'>📩 Smart SMS Insights Dashboard</h1>", unsafe_allow_html=True)
